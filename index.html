@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3 Strike Quiz - Easy Multiplication</title>
+<style>
+body{font-family:Arial;background:#f2f2f2;margin:0;padding:15px;display:flex;justify-content:center;align-items:center;min-height:100vh;}
+.quiz-box{background:white;padding:20px;border-radius:12px;width:100%;max-width:420px;box-shadow:0 0 10px rgba(0,0,0,0.2);text-align:center;}
+h2{color:#0a5c2f;}
+#score span{font-size:28px;}
+#strikes{font-size:28px;color:#e74c3c;margin-bottom:10px;}
+#question{font-size:20px;margin:20px 0;}
+.choice{display:block;width:100%;padding:14px;margin:8px 0;border:none;background:#e6e6e6;border-radius:8px;cursor:pointer;font-size:16px;}
+.correct{background:#2ecc71!important;color:white;}
+.wrong{background:#e74c3c!important;color:white;}
+.blink{animation:blinkGreen 0.4s infinite;}
+@keyframes blinkGreen{0%{background:#2ecc71;color:white;}50%{background:white;color:#2ecc71;}100%{background:#2ecc71;color:white;}}
+#startBtn{padding:12px 25px;font-size:18px;border:none;border-radius:8px;background:#0a5c2f;color:white;cursor:pointer;margin-top:20px;}
+#skipBtn{padding:8px 20px;font-size:16px;border:none;border-radius:8px;background:#999;color:white;cursor:pointer;margin-top:10px;display:none;}
+#skipBtn:disabled{opacity:0.5;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<div class="quiz-box">
+<h2>3 Strike Quiz - Easy Multiplication</h2>
+<button id="startBtn">Start Quiz</button>
+<button id="skipBtn" disabled>Skip</button>
+<div id="strikes" style="display:none;">Strikes: <span>0</span>/3</div>
+<div id="score" style="display:none;">Score: <span>0</span></div>
+<div id="progress"></div>
+<div id="question"></div>
+<div id="choices"></div>
+</div>
+
+<script>
+/* AUDIO - lahat nasa folder audio/ */
+const correctSound = new Audio("audio/Fact.mp3");
+const wrongSound = new Audio("audio/mali.mp3");
+const startVoice = new Audio("audio/start.mp3");
+const instructionVoice = new Audio("audio/instruction.mp3");
+const bgm2 = new Audio("audio/bgm2.mp3");
+const bgm3 = new Audio("audio/bgm3.mp3");
+bgm2.loop = true;
+bgm3.loop = false;
+
+/* BGM BEFORE START */
+const bgm = new Audio("audio/bgm.mp3");
+bgm.loop = true;
+
+/* BGM AFTER START */
+const bgm1 = new Audio("audio/bgm1.mp3");
+bgm1.loop = false;
+
+/* PLAY PRE-START BGM ON CLICK ANYWHERE */
+const startBtn = document.getElementById("startBtn");
+const skipBtn = document.getElementById("skipBtn");
+document.body.addEventListener("click", function playBGMonce() {
+  if (startBtn.style.display !== "none") { 
+    bgm.play();
+    document.body.removeEventListener("click", playBGMonce);
+  }
+});
+
+/* STRIKES VOICE */
+const strikeVoices = [
+  new Audio("audio/strike1.mp3"),
+  new Audio("audio/strike2.mp3"),
+  new Audio("audio/game over.mp3")
+];
+
+/* RANDOM VOICE OVERS */
+const voiceOvers = [
+  new Audio("audio/vo1.mp3"),
+  new Audio("audio/vo2.mp3"),
+  new Audio("audio/vo3.mp3"),
+  new Audio("audio/vo4.mp3")
+];
+
+let quiz=[
+{question:"6 × 6 = ?",choices:["36","7","9","11"],answer:0},
+{question:"10 × 10 = ?",choices:["150","100","200","800"],answer:1},
+{question:"4 × 11 = ?",choices:["14","24","24","44"],answer:3},
+{question:"7 × 7 = ?",choices:["79","49","59","19"],answer:1},
+{question:"6 × 4 = ?",choices:["14","24","44","32"],answer:1},
+{question:"9 × 2 = ?",choices:["16","18","20","14"],answer:1},
+{question:"3 × 3 = ?",choices:["6","9","12","8"],answer:1},
+{question:"4 × 3 = ?",choices:["12","9","15","10"],answer:0},
+{question:"20 × 3 = ?",choices:["62","60","70","90"],answer:1},
+{question:"60 × 4 = ?",choices:["115","118","112","240"],answer:3}
+];
+
+let current=0, score=0, strikes=0;
+
+/* START BUTTON */
+startBtn.onclick = () => {
+  // STOP PRE-START BGM
+  bgm.pause();
+  bgm.currentTime = 0;
+
+  // PLAY BGM1 NORMAL BUT LOWER VOLUME
+  bgm1.volume = 0.3; 
+  bgm1.currentTime = 0;
+  bgm1.play();
+
+  // PLAY BGM2 MUTED 3 sec
+  bgm2.currentTime = 0;
+  bgm2.volume = 0;
+  bgm2.play();
+  setTimeout(()=>{
+    bgm2.pause();
+    bgm2.currentTime = 0;
+    bgm2.volume = 1;
+  },3000);
+
+  startBtn.style.display="none";
+
+  // START VOICE
+  startVoice.play();
+
+  // Skip button will become clickable after 3 seconds
+  setTimeout(()=>{ 
+    skipBtn.style.display="block"; 
+    skipBtn.disabled = false; 
+  },3000);
+
+  startVoice.onended = () => {
+    instructionVoice.play();
+    instructionVoice.onended = () => {
+      skipBtn.style.display = "none";
+      // PLAY BGM2 FOR QUIZ NORMAL LOOP
+      bgm2.currentTime = 0;
+      bgm2.volume = 1;
+      bgm2.play();
+      startGame();
+    };
+  };
+};
+
+/* SKIP BUTTON */
+skipBtn.onclick = () => {
+  instructionVoice.pause();
+  skipBtn.style.display="none";
+
+  // STOP BGM1 IF PLAYING
+  bgm1.pause();
+  bgm1.currentTime = 0;
+
+  // PLAY BGM2 FOR QUIZ NORMAL LOOP
+  bgm2.currentTime = 0;
+  bgm2.volume = 1;
+  bgm2.play();
+  startGame();
+};
+
+/* START GAME */
+function startGame(){
+  document.getElementById("strikes").style.display="block";
+  document.getElementById("score").style.display="block";
+  loadQuestion();
+}
+
+/* LOAD QUESTION */
+function loadQuestion(){
+  let q = quiz[current];
+  document.getElementById("progress").innerText="Question "+(current+1)+" / "+quiz.length;
+  document.getElementById("question").innerText = q.question;
+  let html = "";
+  q.choices.forEach((c,i)=>{
+    html += `<button class="choice" onclick="selectAnswer(${i},this)">${c}</button>`;
+  });
+  document.getElementById("choices").innerHTML = html;
+}
+
+/* PLAY RANDOM VOICE */
+function playRandomVoice(){
+  let r = Math.floor(Math.random()*voiceOvers.length);
+  voiceOvers[r].currentTime=0;
+  voiceOvers[r].play();
+}
+
+/* SELECT ANSWER */
+function selectAnswer(i,btn){
+  let buttons = document.querySelectorAll(".choice");
+  buttons.forEach(b=>b.disabled=true);
+  let correctIndex = quiz[current].answer;
+  if(i===correctIndex){
+    btn.classList.add("correct");
+    score++;
+    correctSound.play();
+    correctSound.onended = ()=>{ playRandomVoice(); setTimeout(nextQuestion,1500); };
+  } else {
+    btn.classList.add("wrong");
+    handleWrong();
+  }
+  document.querySelector("#score span").innerText = score;
+}
+
+/* WRONG ANSWER */
+function handleWrong(){
+  let buttons = document.querySelectorAll(".choice");
+  buttons.forEach(b=>b.disabled=true);
+  let correctIndex = quiz[current].answer;
+  buttons[correctIndex].classList.add("blink");
+  wrongSound.play();
+  wrongSound.onended=()=>{
+    strikes++;
+    document.querySelector("#strikes span").innerText=strikes;
+    if(strikes <= 3){
+      strikeVoices[strikes-1].play();
+      strikeVoices[strikes-1].onended = ()=>{
+        if(strikes>=3){ showFinalResult(); } else { nextQuestion(); }
+      };
+    }
+  };
+}
+
+/* NEXT QUESTION */
+function nextQuestion(){
+  current++;
+  if(current<quiz.length && strikes<3){
+    loadQuestion();
+  } else {
+    showFinalResult();
+  }
+}
+
+/* FINAL RESULT */
+function showFinalResult(){
+  bgm2.pause();
+  bgm2.currentTime=0;
+  document.getElementById("question").style.display="none";
+  document.getElementById("choices").style.display="none";
+  document.getElementById("progress").style.display="none";
+  document.getElementById("strikes").style.display="none";
+
+  let scoreBox=document.getElementById("score");
+  scoreBox.style.fontSize="32px";
+  scoreBox.style.margin="40px auto";
+  document.querySelector("#score span").innerText = score + "/" + quiz.length;
+
+  let scoreAudio = new Audio("audio/score"+score+".mp3");
+  bgm3.volume = 0.2; 
+  bgm3.currentTime=0;
+
+  scoreAudio.play();
+  bgm3.play();
+  scoreAudio.onended = ()=>{ bgm3.volume = 1.0; };
+  bgm3.onended = ()=>{
+    if(score>=8){ window.location.href="final.html"; }
+  };
+}
+</script>
+
+</body>
+</html>
